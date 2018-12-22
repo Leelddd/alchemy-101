@@ -1,4 +1,11 @@
+# ignore dataset
 data/
-tfdata/
+
+# tf record, results, models...
+tf/
+
+.pytest_cache/
+
+# idea files
 .idea/
 *.iml
