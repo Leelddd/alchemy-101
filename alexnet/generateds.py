@@ -8,7 +8,7 @@ image_train_path = './data/flower_photos/'
 tfRecord_train = './tf/flower_train.tfrecords'
 tfRecord_test = './tf/flower_test.tfrecords'
 data_path = './tf'
-image_shape = [1, 224, 224, 3]
+image_shape = [224, 224, 3]
 image_size = (224, 224)
 
 # image_shape = [1, 512, 512, 1]

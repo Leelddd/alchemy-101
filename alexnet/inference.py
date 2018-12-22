@@ -111,8 +111,10 @@ def Net(images, drop):
         full_mid2 = tf.nn.relu(tf.matmul(full_drop1, W2) + b2)
         full_drop2 = tf.nn.dropout(full_mid2, keep_prob=drop)
 
-        W3 = full_weight([4096, 17])
-        b3 = full_bias([17])
+        # W3 = full_weight([4096, 17])
+        # b3 = full_bias([17])
+        W3 = full_weight([4096, 5])
+        b3 = full_bias([5])
         l2_loss += tf.nn.l2_loss(W3)
         l2_loss += tf.nn.l2_loss(b3)
         output = tf.matmul(full_drop2, W3) + b3
@@ -137,9 +139,13 @@ if __name__ == "__main__":
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
 
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
         # 训练200次
         for epoch in range(all_poch):
             ave_cost = 0
+            print(epoch)
 
             xs, ys = sess.run([img_batch, label_batch])
             cost, _ = sess.run([cross_entry, optimizer], feed_dict={images: xs, y: ys, drop_prob: 0.75})
@@ -149,6 +155,9 @@ if __name__ == "__main__":
                 print("epoch : %04d" % (epoch + 1), " ", "cost :{:.9f}".format(ave_cost))
                 accur = sess.run(accuracy, feed_dict={images: xs, y: ys, drop_prob: 1})
                 print('accuracy after %d step: %f' % (epoch, accur))
+
+        coord.request_stop()
+        coord.join(threads)
         # num1 = int(test_dataset_ox17.shape[0] / batch_size)
         #
         # pred = 0.0
