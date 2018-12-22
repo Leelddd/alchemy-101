@@ -8,7 +8,8 @@ image_train_path = './data/flower_photos/'
 tfRecord_train = './tf/flower_train.tfrecords'
 tfRecord_test = './tf/flower_test.tfrecords'
 data_path = './tf'
-image_shape = [1, 256, 256, 3]
+image_shape = [1, 224, 224, 3]
+image_size = (224, 224)
 
 # image_shape = [1, 512, 512, 1]
 
@@ -27,7 +28,7 @@ def write_tfRecord(train_name, test_name, image_path):
         dir_path = os.path.join(image_path, flower_name)
         for img_name in os.listdir(dir_path):
             img = Image.open(os.path.join(dir_path, img_name))
-            img = img.resize((256, 256), Image.ANTIALIAS)
+            img = img.resize(image_size, Image.ANTIALIAS)
             label = label_encoder[flower_name]
             labels = [0] * 5
             labels[label] = 1
@@ -68,7 +69,7 @@ def read_tfRecord(tfRecord_path):
                                            'Y': tf.FixedLenFeature([5], tf.int64)
                                        })
     X = tf.decode_raw(features['X'], tf.uint8)
-    X.set_shape([196608])
+    X.set_shape([image_size[0] * image_size[1] * 3])
     X = tf.reshape(X, image_shape)
     X = tf.cast(X, tf.float32) / 128 - 1
     Y = tf.cast(features['Y'], tf.float32)
@@ -81,15 +82,15 @@ def get_tfrecord(num, isTrain=True):
     tfRecord_path = tfRecord_train if isTrain else tfRecord_test
 
     X, Y = read_tfRecord(tfRecord_path)
-    # img_batch, label_batch = tf.train.shuffle_batch([X, Y], batch_size=num, num_threads=2, capacity=5000,
-    #                                                 min_after_dequeue=1000)
-    # return img_batch, label_batch
-    return X, Y
+    img_batch, label_batch = tf.train.shuffle_batch([X, Y], batch_size=num, num_threads=2, capacity=5000,
+                                                    min_after_dequeue=1000)
+    return img_batch, label_batch
+    # return X, Y
 
 
 # rebuild image to check
 def est_get_tfrecord():
-    x, y = get_tfrecord(5, True)
+    x, y = get_tfrecord(1, True)
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
@@ -98,7 +99,7 @@ def est_get_tfrecord():
         for i in [1, 2, 3]:
             xs, ys = sess.run([x, y])
             arr = ((xs + 1) * 128).astype(np.uint8)
-            arr = arr.reshape([256, 256, 3])
+            arr = arr.reshape([224, 224, 3])
             print(arr.shape)
             print(arr.dtype)
             img = Image.fromarray(arr)
@@ -108,5 +109,5 @@ def est_get_tfrecord():
 
 
 if __name__ == '__main__':
-    generate_tfRecord()
-    # est_get_tfrecord()
+    # generate_tfRecord()
+    est_get_tfrecord()
