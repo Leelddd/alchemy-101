@@ -2,6 +2,14 @@
 
 import tensorflow as tf
 import generateds
+import os
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--mode', default='train')
+
+MODEL_SAVE_PATH = './tf/'
+MODEL_NAME = 'alexnet_model'
 
 batch_size = 32
 all_poch = 2000
@@ -133,9 +141,14 @@ correct_prediction = tf.equal(tf.argmax(out, 1), tf.argmax(y, 1))
 
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-img_batch, label_batch = generateds.get_tfrecord(batch_size, True)
 
-if __name__ == "__main__":
+def train():
+    saver = tf.train.Saver()
+    img_batch, label_batch = generateds.get_tfrecord(batch_size, True)
+
+    f = open('result.txt','a')
+    f.write('result\n')
+
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
 
@@ -151,22 +164,51 @@ if __name__ == "__main__":
             cost, _ = sess.run([cross_entry, optimizer], feed_dict={images: xs, y: ys, drop_prob: 0.75})
 
             ave_cost += cost / batch_size
-            if (epoch + 1) % 100 == 0:
-                print("epoch : %04d" % (epoch + 1), " ", "cost :{:.9f}".format(ave_cost))
+            if (epoch + 1) % 10 == 0:
+                cst = "epoch : %04d" % (epoch + 1), " ", "cost :{:.9f}".format(ave_cost)
+                print(cst)
                 accur = sess.run(accuracy, feed_dict={images: xs, y: ys, drop_prob: 1})
-                print('accuracy after %d step: %f' % (epoch, accur))
+                acr = 'accuracy after %d step: %f' % (epoch, accur)
+                print(acr)
+                f = open('result.txt', 'a')
+                f.write(str(cst)+ '\n')
+                f.write(acr + '\n')
+                saver.save(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME), global_step=epoch)
+                saver.save(sess, '/home/u22520/talex', global_step=epoch)
 
         coord.request_stop()
         coord.join(threads)
-        # num1 = int(test_dataset_ox17.shape[0] / batch_size)
-        #
-        # pred = 0.0
-        # for i in range(num1):
-        #     start = (i * batch_size) % test_dataset_ox17.shape[0]
-        #     end = min(start + batch_size, test_dataset_ox17.shape[0])
-        #     accu = sess.run(accuracy, feed_dict={images: test_dataset_ox17[start:end], y: test_labels_ox17[start:end],
-        #                                          drop_prob: 1})
-        #     # print(train_dataset_[start:end].shape)
-        #     pred += accu / num1
-        # # print(accuracy.eval(feed_dict={images: test_dataset_ox17[start:end], y: test_labels_ox17[start:end]}))
-        # print("accuracy:{:.9f} ".format(pred))
+
+
+def test():
+    saver = tf.train.Saver()
+    img_batch, label_batch = generateds.get_tfrecord(100, False)
+
+    with tf.Session() as sess:
+        ckpt = tf.train.get_checkpoint_state(MODEL_SAVE_PATH)
+        if ckpt and ckpt.model_checkpoint_path:
+            saver.restore(sess, ckpt.model_checkpoint_path)
+            global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
+
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
+            xs, ys = sess.run([img_batch, label_batch])
+            accur = sess.run(accuracy, feed_dict={images: xs, y: ys, drop_prob: 1})
+            print('accuracy after %s step: %f' % (global_step, accur))
+
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
+        else:
+            print('no checkpoint file found')
+
+
+if __name__ == "__main__":
+    a = parser.parse_args()
+    if a.mode == 'train':
+        train()
+    elif a.mode == 'test':
+        test()
+    else:
+        print('wrong mode!!!')
