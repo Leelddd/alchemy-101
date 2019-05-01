@@ -1,4 +1,4 @@
-# deep tragedy
+# alchemy 101
 
-some naive and tragical deep learning experiment.
+deep learning experiments.
 
